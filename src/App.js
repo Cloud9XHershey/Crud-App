@@ -1,43 +1,88 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
-import BarChart from "./components/BarChart";
-import LineChart from "./components/LineChart";
-import PieChart from "./components/PieChart";
-import { UserData } from "./Data";
+import { db } from "./firebase-config";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 function App() {
-  const [userData, setUserData] = useState({
-    labels: UserData.map((data) => data.year),
-    datasets: [
-      {
-        label: "Users Gained",
-        data: UserData.map((data) => data.userGain),
-        backgroundColor: [
-          "rgba(75,192,192,1)",
-          "#ecf0f1",
-          "#50AF95",
-          "#f3ba2f",
-          "#2a71d0",
-        ],
-        borderColor: "black",
-        borderWidth: 2,
-      },
-    ],
-  });
+  const [newName, setNewName] = useState("");
+  const [newAge, setNewAge] = useState(0);
 
-  // IF YOU SEE THIS COMMENT: I HAVE GOOD EYESIGHT
+  const [users, setUsers] = useState([]);
+  const usersCollectionRef = collection(db, "users");
+
+  const createUser = async () => {
+    await addDoc(usersCollectionRef, { name: newName, age: Number(newAge) });
+  };
+
+  const updateUser = async (id, age) => {
+    const userDoc = doc(db, "users", id);
+    const newFields = { age: age + 1 };
+    await updateDoc(userDoc, newFields);
+  };
+
+  const deleteUser = async (id) => {
+    const userDoc = doc(db, "users", id);
+    await deleteDoc(userDoc);
+  };
+
+  useEffect(() => {
+    const getUsers = async () => {
+      const data = await getDocs(usersCollectionRef);
+      setUsers(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+    };
+
+    getUsers();
+  }, []);
 
   return (
     <div className="App">
-      <div style={{ width: 700 }}>
-        <BarChart chartData={userData} />
-      </div>
-      <div style={{ width: 700 }}>
-        <LineChart chartData={userData} />
-      </div>
-      <div style={{ width: 700 }}>
-        <PieChart chartData={userData} />
-      </div>
+      <input
+        placeholder="Name..."
+        onChange={(event) => {
+          setNewName(event.target.value);
+        }}
+      />
+      <input
+        type="number"
+        placeholder="Age..."
+        onChange={(event) => {
+          setNewAge(event.target.value);
+        }}
+      />
+
+      <button onClick={createUser}> Create User</button>
+      {users.map((user) => {
+        return (
+          <div>
+            {" "}
+            <h1>Name: {user.name}</h1>
+            <h1>Age: {user.age}</h1>
+            <button
+              onClick={() => {
+                updateUser(user.id, user.age);
+              }}
+            >
+              {" "}
+              Increase Age
+            </button>
+            <button
+              onClick={() => {
+                deleteUser(user.id);
+              }}
+            >
+              {" "}
+              Delete User
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
